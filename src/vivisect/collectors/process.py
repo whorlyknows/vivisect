@@ -26,7 +26,7 @@ def collect_process_info(proc: psutil.Process) -> dict[str, Any]:
             username = "unknown"
 
         try:
-            num_fds = proc.num_fds()  # type: ignore
+            num_fds = proc.num_fds()
         except AttributeError:
             # num_fds() not available on Windows
             try:
