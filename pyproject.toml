@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vivisect"
+version = "0.1.0"
+description = "Attach to any running Python process and perform a live autopsy — memory, threads, files, network, stack traces — all in your terminal."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "rasasarvi" }]
+keywords = ["debugging", "profiling", "introspection", "process", "cli", "devtools"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Debuggers",
+    "Topic :: System :: Monitoring",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "click>=8.1",
+    "psutil>=5.9",
+    "pydantic>=2.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+html = ["jinja2>=3.1"]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.5", "mypy>=1.10"]
+all = ["vivisect[html,dev]"]
+
+[project.scripts]
+vivisect = "vivisect.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vivisect"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "TCH"]
+ignore = ["TCH001", "TCH002", "TCH003", "B904"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["vivisect"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[dependency-groups]
+dev = [
+    "types-psutil>=7.2.2.20260906",
+]
