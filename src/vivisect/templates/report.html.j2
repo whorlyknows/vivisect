@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; }
+    .mono { font-family: 'Courier New', monospace; }
+    .gradient-header { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); }
+    .stat-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    .stat-card:hover { border-color: rgba(139,233,253,0.3); transform: translateY(-2px); transition: all 0.2s; }
+    .section-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); }
+    .table-row:hover { background: rgba(255,255,255,0.04); }
+    .badge { padding: 2px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+    .badge-green { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .badge-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .badge-yellow { background: rgba(234,179,8,0.15); color: #facc15; }
+    .badge-red { background: rgba(239,68,68,0.15); color: #f87171; }
+    .progress-bar { background: rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden; height: 8px; }
+    .glow-border { box-shadow: 0 0 30px rgba(99, 102, 241, 0.1), 0 0 60px rgba(99, 102, 241, 0.05); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-in { animation: fadeIn 0.4s ease-out forwards; }
+  </style>
+</head>
+<body style="background: #0a0a1a; color: #e2e8f0; margin: 0; padding: 0;">
+
+  <!-- Navigation Bar -->
+  <nav style="position: sticky; top: 0; z-index: 50; background: rgba(10,10,26,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.06); padding: 12px 32px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 24px;">🔬</span>
+      <span style="font-size: 18px; font-weight: 700; background: linear-gradient(135deg, #8be9fd, #bd93f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Vivisect</span>
+      <span style="font-size: 12px; color: #64748b; margin-left: 8px;">v{{ snapshot.vivisect_version }}</span>
+    </div>
+    <div style="display: flex; gap: 16px; align-items: center; font-size: 13px;">
+      <a href="#resources" style="color: #94a3b8; text-decoration: none;">Resources</a>
+      <a href="#threads" style="color: #94a3b8; text-decoration: none;">Threads</a>
+      <a href="#network" style="color: #94a3b8; text-decoration: none;">Network</a>
+      <a href="#files" style="color: #94a3b8; text-decoration: none;">Files</a>
+      <a href="#python" style="color: #94a3b8; text-decoration: none;">Python</a>
+      <button onclick="copyJSON()" style="background: rgba(99,102,241,0.2); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer;">📋 Copy JSON</button>
+    </div>
+  </nav>
+
+  <div style="max-width: 1100px; margin: 0 auto; padding: 32px;">
+
+    <!-- Hero Header -->
+    <div class="gradient-header glow-border animate-in" style="border-radius: 16px; padding: 40px; margin-bottom: 32px; text-align: center;">
+      <div style="font-size: 13px; color: #64748b; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;">Process Autopsy Report</div>
+      <h1 style="margin: 0; font-size: 36px; font-weight: 800;">
+        <span style="background: linear-gradient(135deg, #8be9fd, #bd93f9, #ff79c6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">PID {{ snapshot.pid }}</span>
+      </h1>
+      <div style="margin-top: 12px; display: flex; justify-content: center; gap: 24px; font-size: 14px;">
+        <span><span style="color: #64748b;">Process:</span> <span style="color: #f8f8f2; font-weight: 600;">{{ snapshot.name }}</span></span>
+        <span><span style="color: #64748b;">User:</span> <span style="color: #f8f8f2;">{{ snapshot.username }}</span></span>
+        <span><span style="color: #64748b;">Status:</span> <span class="badge badge-green">● {{ snapshot.status }}</span></span>
+        {% if snapshot.create_time %}
+        <span><span style="color: #64748b;">Uptime:</span> <span style="color: #f8f8f2;">{{ (snapshot.timestamp - snapshot.create_time).total_seconds() | format_duration }}</span></span>
+        {% endif %}
+      </div>
+      <div style="margin-top: 8px; font-size: 12px; color: #475569;" class="mono">
+        Command: {{ snapshot.command_line | join(" ") }}
+      </div>
+      <div style="margin-top: 16px; font-size: 11px; color: #475569;">
+        Report generated at {{ snapshot.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }} · Collection time: {{ snapshot.collection_time_ms }}ms
+      </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div id="resources" class="animate-in" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 32px; animation-delay: 0.1s;">
+      <div class="stat-card" style="border-radius: 12px; padding: 20px; text-align: center;">
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">CPU USAGE</div>
+        <div style="font-size: 28px; font-weight: 800; color: #4ade80;">{{ snapshot.cpu_percent }}%</div>
+        <div class="progress-bar" style="margin-top: 12px;">
+          <div style="height: 100%; width: {{ snapshot.cpu_percent if snapshot.cpu_percent <= 100 else 100 }}%; background: linear-gradient(90deg, #22c55e, #a3e635); border-radius: 8px;"></div>
+        </div>
+      </div>
+      <div class="stat-card" style="border-radius: 12px; padding: 20px; text-align: center;">
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">MEMORY (RSS)</div>
+        <div style="font-size: 28px; font-weight: 800; color: #60a5fa;">{{ snapshot.memory_rss | format_bytes }}</div>
+        <div class="progress-bar" style="margin-top: 12px;">
+          <div style="height: 100%; width: {{ snapshot.memory_percent }}%; background: linear-gradient(90deg, #3b82f6, #a78bfa); border-radius: 8px;"></div>
+        </div>
+        <div style="font-size: 11px; color: #475569; margin-top: 4px;">{{ snapshot.memory_percent }}% of system</div>
+      </div>
+      <div class="stat-card" style="border-radius: 12px; padding: 20px; text-align: center;">
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">THREADS</div>
+        <div style="font-size: 28px; font-weight: 800; color: #facc15;">{{ snapshot.num_threads }}</div>
+      </div>
+      <div class="stat-card" style="border-radius: 12px; padding: 20px; text-align: center;">
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">OPEN FILES</div>
+        <div style="font-size: 28px; font-weight: 800; color: #fb923c;">{{ snapshot.open_files | length }}</div>
+      </div>
+      <div class="stat-card" style="border-radius: 12px; padding: 20px; text-align: center;">
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">CONNECTIONS</div>
+        <div style="font-size: 28px; font-weight: 800; color: #c084fc;">{{ snapshot.connections | length }}</div>
+      </div>
+    </div>
+
+    <!-- Threads Table -->
+    <div id="threads" class="section-card animate-in" style="border-radius: 12px; padding: 24px; margin-bottom: 24px; animation-delay: 0.2s;">
+      <h2 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+        <span>🧵</span> Threads
+        <span style="font-size: 12px; color: #64748b; font-weight: 400;">({{ snapshot.threads | length }} total)</span>
+      </h2>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <thead>
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+            <th style="text-align: left; padding: 10px 12px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase;">TID</th>
+            <th style="text-align: left; padding: 10px 12px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase;">Name</th>
+            <th style="text-align: left; padding: 10px 12px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase;">Status</th>
+            <th style="text-align: right; padding: 10px 12px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase;">User Time</th>
+            <th style="text-align: right; padding: 10px 12px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase;">Sys Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for thread in snapshot.threads %}
+          <tr class="table-row" style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+            <td class="mono" style="padding: 10px 12px; color: #94a3b8;">{{ thread.id }}</td>
+            <td style="padding: 10px 12px; font-weight: 600;">{{ thread.name or "Unknown" }}</td>
+            <td style="padding: 10px 12px;"><span class="badge badge-green">{{ thread.status }}</span></td>
+            <td class="mono" style="padding: 10px 12px; text-align: right; color: #94a3b8;">{{ thread.cpu_user_time }}s</td>
+            <td class="mono" style="padding: 10px 12px; text-align: right; color: #94a3b8;">{{ thread.cpu_system_time }}s</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Network Connections -->
+    <div id="network" class="section-card animate-in" style="border-radius: 12px; padding: 24px; margin-bottom: 24px; animation-delay: 0.3s;">
+      <h2 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+        <span>🌐</span> Network Connections
+        <span style="font-size: 12px; color: #64748b; font-weight: 400;">({{ snapshot.connections | length }} total)</span>
+      </h2>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <thead>
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+            <th style="text-align: left; padding: 10px 12px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase;">Proto</th>
+            <th style="text-align: left; padding: 10px 12px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase;">Local Address</th>
+            <th style="text-align: left; padding: 10px 12px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase;">Remote Address</th>
+            <th style="text-align: left; padding: 10px 12px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for conn in snapshot.connections %}
+          <tr class="table-row" style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+            <td style="padding: 10px 12px;"><span class="badge badge-blue">{{ conn.type }}</span></td>
+            <td class="mono" style="padding: 10px 12px;">{{ conn.local_addr }}</td>
+            <td class="mono" style="padding: 10px 12px; color: #475569;">{{ conn.remote_addr or "—" }}</td>
+            <td style="padding: 10px 12px;"><span class="badge badge-green">{{ conn.status }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Files Table -->
+    <div id="files" class="section-card animate-in" style="border-radius: 12px; padding: 24px; margin-bottom: 24px; animation-delay: 0.3s;">
+      <h2 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+        <span>📁</span> Open Files
+        <span style="font-size: 12px; color: #64748b; font-weight: 400;">({{ snapshot.open_files | length }} total)</span>
+      </h2>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <thead>
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+            <th style="text-align: left; padding: 10px 12px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase;">FD</th>
+            <th style="text-align: left; padding: 10px 12px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase;">Path</th>
+            <th style="text-align: left; padding: 10px 12px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase;">Mode</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in snapshot.open_files %}
+          <tr class="table-row" style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+            <td class="mono" style="padding: 10px 12px; color: #94a3b8;">{{ f.fd if f.fd is not none else "?" }}</td>
+            <td class="mono" style="padding: 10px 12px;">{{ f.path }}</td>
+            <td style="padding: 10px 12px;"><span class="badge badge-yellow">{{ f.mode }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Python Runtime -->
+    {% if snapshot.python %}
+    <div id="python" class="section-card animate-in" style="border-radius: 12px; padding: 24px; margin-bottom: 24px; animation-delay: 0.35s;">
+      <h2 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+        <span>🐍</span> Python Runtime
+      </h2>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
+        <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 14px;">
+          <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Version</div>
+          <div style="font-size: 16px; font-weight: 700; color: #4ade80;" class="mono">{{ snapshot.python.version }}</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 14px;">
+          <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Executable</div>
+          <div style="font-size: 13px; color: #e2e8f0;" class="mono">{{ snapshot.python.executable }}</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 14px;">
+          <div style="font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">GC State</div>
+          <div style="font-size: 16px; font-weight: 700; color: #4ade80;">
+            {% if snapshot.python.gc_enabled %}✓ Enabled{% else %}✗ Disabled{% endif %}
+            {% if snapshot.python.gc_counts %}
+            <span style="font-size: 12px; color: #94a3b8;" class="mono">{{ snapshot.python.gc_counts }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">LOADED MODULES ({{ snapshot.python.loaded_modules | length }})</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          {% for mod in snapshot.python.loaded_modules %}
+          <span style="font-size: 12px; padding: 4px 12px; background: rgba(99,102,241,0.15); color: #818cf8; border-radius: 6px; font-weight: 600;">{{ mod }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div style="text-align: center; padding: 24px; font-size: 12px; color: #475569;">
+      <div>Generated by <span style="font-weight: 700; background: linear-gradient(135deg, #8be9fd, #bd93f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Vivisect v{{ snapshot.vivisect_version }}</span></div>
+      <div style="margin-top: 4px;">github.com/rasasarvi/vivisect</div>
+    </div>
+  </div>
+
+  <script>
+    function copyJSON() {
+      const data = {{ snapshot_json | safe }};
+      navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+      alert("JSON copied to clipboard!");
+    }
+  </script>
+</body>
+</html>
